@@ -13,6 +13,7 @@
             [cook.sim.runner :as runner]
             [cook.sim.reporting :as report]
             [cook.sim.system :as sys]
+            [cook.sim.util :as u]
             [simulant.util :as simu]
             [com.stuartsierra.component :as component]
             [reloaded.repl :refer [system init start stop go reset reset-all]]
@@ -77,7 +78,8 @@
 
 (defn list-sims
   [sched-id]
-  (report/list-sims (sim-db) (cook-db) sched-id))
+  (report/list-sims (sim-db) (cook-db) sched-id
+                    #inst "2016-06-21T23:50:03.892-00:00"))
 
 (defn simulate!
   [sched-id label]

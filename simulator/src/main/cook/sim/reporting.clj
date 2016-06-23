@@ -293,11 +293,15 @@
 
 (defn list-sims
   "A Command line task; prints out info about all sims for specified schedule"
-  [sim-db cook-db sched-id]
-  (println "listing simulation runs for test" sched-id "...")
-  (let [sim-db-val (-> sim-db :conn d/db)
-        cook-db-val (-> cook-db :conn d/db)
-        test-entity (d/entity sim-db-val sched-id)
-        sims (map (partial format-sim-result sim-db-val cook-db-val)
-                  (:test/sims test-entity))]
-    (pprint/print-table (sort-by (fn [r] [(r "Min-DRU-Diff") (r "When")]) sims))))
+  ([sim-db cook-db sched-id]
+   (list-sims sim-db cook-db sched-id #inst "1776"))
+  ([sim-db cook-db sched-id after]
+   (println "listing simulation runs for test" sched-id "...")
+   (let [sim-db-val (-> sim-db :conn d/db)
+         cook-db-val (-> cook-db :conn d/db)
+         test-entity (d/entity sim-db-val sched-id)
+         filtered (filter (fn [s] (> (.getTime (u/created-at sim-db-val (:db/id s)))
+                                     (.getTime after)))
+                          (:test/sims test-entity))
+         sims (map (partial format-sim-result sim-db-val cook-db-val) filtered)]
+     (pprint/print-table (sort-by (fn [r] [(r "Min-DRU-Diff") (r "When")]) sims)))))
