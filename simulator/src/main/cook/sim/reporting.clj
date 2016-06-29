@@ -175,7 +175,7 @@
                (let [baseline-jobs (filter sift-pred (job-results sim-db cook-db baseline-sim-id))
                      compared-jobs (filter sift-pred (job-results sim-db cook-db compared-sim-id))
                      comparison (job-by-job-comparison baseline-jobs compared-jobs metric)]
-                 (/ (->> comparison (filter #(> % 1.0)) count)
+                 (/ (->> comparison (filter #(>= % 1.0)) count)
                     (count comparison))))
              baseline-sims compared-sims)]
     (chart/add-categories chart
