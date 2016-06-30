@@ -22,3 +22,6 @@ env:
 script:
   - ps aux | grep mesos
   - sudo ls -l /usr/local/sbin/ | grep mesos
+  - which mesos-master
+  - which mesos-slave
+  
