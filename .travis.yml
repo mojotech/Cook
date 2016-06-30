@@ -21,4 +21,4 @@ env:
 #before_script: (cd $TEST_DIR && $DEPS_CMD)
 script:
   - ps aux | grep mesos
-  - ls -l /usr/local/sbin/ | grep mesos
+  - sudo ls -l /usr/local/sbin/ | grep mesos
