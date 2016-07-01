@@ -3,13 +3,8 @@ before_install:
   - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
   - echo "deb http://repos.mesosphere.io/ubuntu/ precise main" | sudo tee /etc/apt/sources.list.d/mesosphere.list
   # Add repository key
-  - "curl -s http://archive.cloudera.com/cdh4/ubuntu/precise/amd64/cdh/archive.key | sudo apt-key add -"
-  - "wget http://archive.cloudera.com/cdh4/one-click-install/precise/amd64/cdh4-repository_1.0_all.deb"
-  # Add Cloudera repository
-  - "sudo dpkg -i cdh4-repository_1.0_all.deb"
   - sudo apt-get update -qq
   - sudo apt-get install mesos -y </dev/null
-  # zookeeper-server
 branches:
   only:
     - master
@@ -26,23 +21,23 @@ env:
 
 #before_script: (cd $TEST_DIR && $DEPS_CMD)
 before_script:
-  - "sudo service zookeeper restart"
+  - sudo service zookeeper restart
+
 script:
+  - ps aux | grep zookeeper
   - ps aux | grep mesos
-  - sudo ls -l /usr/local/sbin/ | grep mesos
+
   - which mesos-master
   - which mesos-slave
-#  - cat /etc/default/mesos-master
-#  - touch /etc/default/mesos-master
+  - which mesos-init-wrapper
+
 #  - cat /etc/default/mesos-slave
 #  - service mesos-slave start
 #  - service mesos-master start
-  - ps aux | grep zookeeper
-  - which zookeeper-server
-  - sudo service zookeeper-server start
   - sudo cat /etc/default/mesos-master
-  - mesos-master
-  - mesos-slave
+
+  - MESOS_WORK_DIR=/tmp/mesos/ mesos-master
+  # - mesos-slave
   - sleep 10 && ps aux | grep mesos
 
 after_script:
