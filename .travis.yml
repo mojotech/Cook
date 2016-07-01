@@ -31,14 +31,20 @@ script:
   - which mesos-slave
   - which mesos-init-wrapper
 
+#  - sudo service mesos-master restart
+
 #  - cat /etc/default/mesos-slave
 #  - service mesos-slave start
 #  - service mesos-master start
-  - sudo cat /etc/default/mesos-master
+#  - sudo cat /etc/default/mesos-master
 
-  - MESOS_WORK_DIR=/tmp/mesos/ mesos-master
+  - mesos-master --zk=zk://127.0.0.1:2181/mesos --quorum=1 --ip=127.0.0.1 --workdir=/tmp/mesos &
+#  - MESOS-ZK=zk://127.0.0.1:2181/mesos MESOS_IP=127.0.0.1 MESOS_QUORUM=1 MESOS_WORK_DIR=/tmp/mesos/ mesos-master 
   # - mesos-slave
   - sleep 10 && ps aux | grep mesos
+
+# "--ip=127.0.0.1" "--zk=zk://127.0.0.1:2181/mesos" "--quorum=1"
+            "--work_dir=/tmp/mesos"
 
 after_script:
   - "sudo service zookeeper-server stop"
