@@ -24,10 +24,12 @@ script:
   - sudo ls -l /usr/local/sbin/ | grep mesos
   - which mesos-master
   - which mesos-slave
-  - cat /etc/default/mesos-master
-  - touch /etc/default/mesos-master
-  - cat /etc/default/mesos-slave
-  - service mesos-slave start
-  - service mesos-master start
+#  - cat /etc/default/mesos-master
+#  - touch /etc/default/mesos-master
+#  - cat /etc/default/mesos-slave
+#  - service mesos-slave start
+#  - service mesos-master start
   - sleep 10 && ps aux | grep mesos
-  
+  - which zookeeper
+  - mesos-master
+  - mesos-slave
