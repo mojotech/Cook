@@ -28,8 +28,9 @@ script:
   - ps aux | grep mesos
   - which mesos-master
   - which mesos-slave
-  - which mesos-init-wrapper
-  - "mesos-master --zk=zk://127.0.0.1:2181/mesos --quorum=1 --ip=127.0.0.1 --workdir=/tmp/mesos"
+  - mesos-master --zk=zk://127.0.0.1:2181/mesos --quorum=1 --ip=127.0.0.1 --work_dir=/tmp/mesos &
+  - mesos-slave --master=127.0.0.1:5050 --no-switch-user --hostname=slave2 --port=5052 --work_dir=/tmp/mesos_slave_2 --resources=cpus:40.0;mem:262144 &
+
   - sleep 10 && ps aux | grep mesos
 
 after_script:
