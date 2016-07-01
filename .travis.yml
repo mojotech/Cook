@@ -19,6 +19,9 @@ env:
     # - TEST_DIR=jobclient DEPS_CMD='mvn dependency:resolve' TEST_CMD='mvn test'
 
 #before_script: (cd $TEST_DIR && $DEPS_CMD)
+before_script:
+  - sudo service zookeeper-server start
+  - sudo cat /etc/default/mesos-master
 script:
   - ps aux | grep mesos
   - sudo ls -l /usr/local/sbin/ | grep mesos
