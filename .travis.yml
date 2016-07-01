@@ -38,7 +38,7 @@ script:
 #  - service mesos-master start
 #  - sudo cat /etc/default/mesos-master
 
-  - mesos-master --zk=zk://127.0.0.1:2181/mesos --quorum=1 --ip=127.0.0.1 --workdir=/tmp/mesos &
+  - "mesos-master --zk=zk://127.0.0.1:2181/mesos --quorum=1 --ip=127.0.0.1 --workdir=/tmp/mesos"
 #  - MESOS-ZK=zk://127.0.0.1:2181/mesos MESOS_IP=127.0.0.1 MESOS_QUORUM=1 MESOS_WORK_DIR=/tmp/mesos/ mesos-master 
   # - mesos-slave
   - sleep 10 && ps aux | grep mesos
