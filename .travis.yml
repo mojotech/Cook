@@ -2,16 +2,16 @@ language: java
 before_install:
   - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
   - echo "deb http://repos.mesosphere.io/ubuntu/ precise main" | sudo tee /etc/apt/sources.list.d/mesosphere.list
-  - sudo apt-get update -qq
-  - sudo apt-get install mesos -y </dev/null
   # Add repository key
   - "curl -s http://archive.cloudera.com/cdh4/ubuntu/precise/amd64/cdh/archive.key | sudo apt-key add -"
   - "wget http://archive.cloudera.com/cdh4/one-click-install/precise/amd64/cdh4-repository_1.0_all.deb"
   # Add Cloudera repository
   - "sudo dpkg -i cdh4-repository_1.0_all.deb"
+  - sudo apt-get update -qq
+  - sudo apt-get install mesos -y </dev/null
   - "sudo apt-get update -qq"
   # Install ZooKeeper
-  - "sudo apt-get install -y zookeeper zookeeper-server"
+  - "sudo apt-get install -y zookeeper-server"
 
 branches:
   only:
