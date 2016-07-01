@@ -8,8 +8,8 @@ before_install:
   # Add Cloudera repository
   - "sudo dpkg -i cdh4-repository_1.0_all.deb"
   - sudo apt-get update -qq
-  - sudo apt-get install mesos zookeeper-server -y </dev/null
-
+  - sudo apt-get install mesos -y </dev/null
+  # zookeeper-server
 branches:
   only:
     - master
@@ -26,8 +26,7 @@ env:
 
 #before_script: (cd $TEST_DIR && $DEPS_CMD)
 before_script:
-  - "sudo service zookeeper-server init"
-  - "sudo service zookeeper-server start"
+  - "sudo service zookeeper restart"
 script:
   - ps aux | grep mesos
   - sudo ls -l /usr/local/sbin/ | grep mesos
