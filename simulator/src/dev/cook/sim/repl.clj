@@ -77,9 +77,8 @@
   (schedule/list-job-schedules (sim-db)))
 
 (defn list-sims
-  [sched-id]
-  (report/list-sims (sim-db) (cook-db) sched-id
-                    #inst "2016-06-21T23:50:03.892-00:00"))
+  [sched-id after]
+  (report/list-sims (sim-db) (cook-db) sched-id after))
 
 (defn simulate!
   [sched-id label]
@@ -181,7 +180,7 @@
   [db eid]
   (d/pull db "[*]" eid))
 
-(def dru-scale (math/expt 10 305))
+(def dru-scale 1000000)
 (defn dru-at-scale
   [dru]
   (* dru dru-scale))
