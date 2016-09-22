@@ -376,9 +376,10 @@
     utilization))
 
 (defn start-rebalancer!
-  [{:keys [conn driver mesos-master-hosts pending-jobs-atom view-incubating-offers view-mature-offers dru-scale]}]
+  [{:keys [conn driver mesos-master-hosts pending-jobs-atom view-incubating-offers view-mature-offers dru-scale config]}]
   (binding [metrics-dru-scale dru-scale]
-    (let [rebalance-interval (time/minutes 5)
+    (prn "rebalancer config" config)
+    (let [rebalance-interval (time/seconds (:interval-seconds config))
           observe-interval (time/seconds 5)
           observe-refreshness-threshold (time/seconds 30)
           host->combined-offers-atom (atom {})
