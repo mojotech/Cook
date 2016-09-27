@@ -77,7 +77,7 @@
                       (route/not-found "<h1>Not a valid route</h1>")))})
 
 (def mesos-scheduler
-  {:mesos-scheduler (fnk [[:settings mesos-master mesos-master-hosts mesos-leader-path mesos-failover-timeout mesos-principal mesos-role offer-incubate-time-ms fenzo-max-jobs-considered fenzo-scaleback fenzo-floor-iterations-before-warn fenzo-floor-iterations-before-reset task-constraints riemann dru-scale] mesos-datomic mesos-datomic-mult curator-framework mesos-pending-jobs-atom]
+  {:mesos-scheduler (fnk [[:settings mesos-master mesos-master-hosts mesos-leader-path mesos-failover-timeout mesos-principal mesos-role offer-incubate-time-ms fenzo-max-jobs-considered fenzo-scaleback fenzo-floor-iterations-before-warn fenzo-floor-iterations-before-reset task-constraints riemann dru-scale rebalancer] mesos-datomic mesos-datomic-mult curator-framework mesos-pending-jobs-atom]
                          (try
                            (Class/forName "org.apache.mesos.Scheduler")
                            ((lazy-load-var 'cook.mesos/start-mesos-scheduler)
@@ -99,7 +99,8 @@
                             (:host riemann)
                             (:port riemann)
                             mesos-pending-jobs-atom
-                            dru-scale)
+                            dru-scale
+                            rebalancer)
                            (catch ClassNotFoundException e
                              (log/warn e "Not loading mesos support...")
                              nil)))})
@@ -368,6 +369,10 @@
                                ((lazy-load-var 'cook.reporter/riemann-reporter) config))))
      :dru-scale (fnk [[:config [:scheduler {dru-scale 1.0}]]]
                      dru-scale)
+
+     :rebalancer (fnk [[:config {rebalancer nil}]]
+                      (merge {:interval-seconds 300}
+                             rebalancer))
 
      :nrepl-server (fnk [[:config [:nrepl {enabled? false} {port 0}]]]
                         (when enabled?
