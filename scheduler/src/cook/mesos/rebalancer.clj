@@ -375,6 +375,15 @@
                               (apply max))]
     utilization))
 
+(defn read-datomic-params
+  [conn]
+  (-<>>
+   (d/pull (mt/db conn) ["*"] :rebalancer/config)
+   (dissoc <> ":db/id" ":db/ident")
+   (map (fn [[k v]]
+          [(keyword (name (keyword k))) v]))
+   (into {})))
+
 (defn start-rebalancer!
   [{:keys [conn driver mesos-master-hosts pending-jobs-atom view-incubating-offers view-mature-offers dru-scale]}]
   (binding [metrics-dru-scale dru-scale]
@@ -394,13 +403,7 @@
                                                  host->combined-offers))))
           shutdown-rebalancer (chime-at (periodic/periodic-seq (time/now) rebalance-interval)
                                         (fn [now]
-                                          (let [db (mt/db conn)
-                                                params (-<>>
-                                                        (d/pull db ["*"] :rebalancer/config)
-                                                        (dissoc <> ":db/id" ":db/ident")
-                                                        (map (fn [[k v]]
-                                                               [(keyword (name (keyword k))) v]))
-                                                        (into {}))
+                                          (let [params (read-datomic-params conn)
                                                 utilization (get-mesos-utilization mesos-master-hosts)
                                                 host->spare-resources (->> @host->combined-offers-atom
                                                                            (map (fn [[k v]]
