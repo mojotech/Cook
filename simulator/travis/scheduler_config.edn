@@ -9,7 +9,7 @@
                                 :timeout-interval-minutes 1
                                 :memory-gb 48
                                 :cpus 6}}
- :rebalancer {:interval-seconds 20
+ :rebalancer {:interval-seconds 10
               :min-utilization-threshold 0.0
               :safe-dru-threshold 0.0
               ;; virtually ANY improvement in DRU balance should provoke preemption:
