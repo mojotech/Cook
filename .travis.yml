@@ -9,6 +9,7 @@ before_install:
 branches:
   only:
     - master
+    - mf/rebalancer_crashing
 sudo: required
 dist: trusty
 env:
