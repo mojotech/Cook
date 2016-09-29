@@ -419,6 +419,7 @@
                                                  host->combined-offers))))
           shutdown-rebalancer (chime-at (periodic/periodic-seq (time/now) rebalance-interval)
                                         (fn [now]
+                                          (log/info "rebalance chime kicked in")
                                           (let [params (read-datomic-params conn)
                                                 utilization (get-mesos-utilization mesos-master-hosts)
                                                 host->spare-resources (->> @host->combined-offers-atom
@@ -428,8 +429,12 @@
                                                                                          (:time-observed v))
                                                                                     [k (select-keys (:resources v) [:cpus :mem])])))
                                                                            (into {}))]
+                                            (log/info "params is" params)
+                                            (log/info "utilization is" utilization)
+                                            (log/info "host->spare-resources is" host->spare-resources)
                                             (when (and (seq params)
                                                        (> utilization (:min-utilization-threshold params)))
+                                              (log/info "About to rebalance!")
                                               (rebalance! conn driver @pending-jobs-atom host->spare-resources params))))
                                         {:error-handler (fn [ex] (log/error ex "Rebalance failed"))})]
       #(do
