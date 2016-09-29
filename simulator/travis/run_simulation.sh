@@ -14,4 +14,4 @@ cd ../simulator
 lein run -c config/settings.edn setup-database -c travis/simulator_config.edn
 lein run -c config/settings.edn travis -c travis/simulator_config.edn
 
-cat ../scheduler/log/cook.log
+cat ../scheduler/log/cook.log | grep rebalanc -C 20
