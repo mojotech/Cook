@@ -434,8 +434,10 @@
                                             (log/info "host->spare-resources is" host->spare-resources)
                                             (when (and (seq params)
                                                        (> utilization (:min-utilization-threshold params)))
-                                              (log/info "About to rebalance!")
-                                              (rebalance! conn driver @pending-jobs-atom host->spare-resources params))))
+                                              (do
+                                                (log/info "About to rebalance!")
+                                                (rebalance! conn driver @pending-jobs-atom host->spare-resources params)
+                                                ))))
                                         {:error-handler (fn [ex] (log/error ex "Rebalance failed"))})]
       #(do
          (shutdown-observer)
