@@ -30,23 +30,23 @@
 (defn sim-progress
   [sim-db cook-db sim-id]
   (let [jobs (reporting/job-results-from-components sim-db cook-db sim-id)
-        [valid-jobs invalid-jobs] ((juxt filter remove) schedulable? jobs)
+        [schedulable-jobs unschedulable-jobs] ((juxt filter remove) schedulable? jobs)
         [scheduled-jobs unscheduled-jobs] ((juxt filter remove) :wait-time jobs)
         [finished-jobs unfinished-jobs] ((juxt filter remove) :turnaround jobs)]
-    {:valid {:total (count valid-jobs)
-             :unscheduled (count (intersection (set valid-jobs) (set unscheduled-jobs)))
-             :unfinished (count (intersection (set valid-jobs) (set unfinished-jobs)))}
-     :invalid {:total (count invalid-jobs)
-               :unscheduled (count (intersection (set invalid-jobs) (set unscheduled-jobs)))
-               :unfinished (count (intersection (set invalid-jobs) (set unscheduled-jobs)))}}))
+    {:schedulable {:total (count schedulable-jobs)
+                   :unscheduled (count (intersection (set schedulable-jobs) (set unscheduled-jobs)))
+                   :unfinished (count (intersection (set schedulable-jobs) (set unfinished-jobs)))}
+     :unschedulable {:total (count unschedulable-jobs)
+                     :unscheduled (count (intersection (set unschedulable-jobs) (set unscheduled-jobs)))
+                     :unfinished (count (intersection (set unschedulable-jobs) (set unscheduled-jobs)))}}))
 
 (defn sim-finished?
   [sim-db cook-db sim-id]
   (let [progress (sim-progress sim-db cook-db sim-id)
-        count-unscheduled (-> progress :valid :unscheduled)
-        count-unfinished (-> progress :valid :unfinished)]
-    (println count-unscheduled "unscheduled valid jobs.")
-    (println count-unfinished "unfinished valid jobs.")
+        count-unscheduled (-> progress :schedulable :unscheduled)
+        count-unfinished (-> progress :schedulable :unfinished)]
+    (println count-unscheduled "unscheduled schedulable jobs.")
+    (println count-unfinished "unfinished schedulable jobs.")
     (if (zero? count-unfinished) progress false)))
 
 (defn wait-for-sim-to-finish
@@ -68,11 +68,11 @@
         _ (wait-for-cook settings)
         sim-id (runner/simulate! settings sim-db schedule-id "Travis run")
         final-progress (wait-for-sim-to-finish sim-db cook-db sim-id timeout-secs)
-        invalid-jobs (:invalid final-progress)
-        num-scheduled-invalid (- (:total invalid-jobs) (:unscheduled invalid-jobs))]
+        unschedulable-jobs (:unschedulable final-progress)
+        num-scheduled-unschedulable (- (:total unschedulable-jobs) (:unscheduled unschedulable-jobs))]
     (reporting/analyze settings sim-db cook-db sim-id)
     (if (not final-progress)
       (throw (Exception. "Sim never finished.")))
-    (if (zero? num-scheduled-invalid)
-      (println (:total invalid-jobs) " intentionally unschedulable jobs were never scheduled.  Perfect!")
-      (throw (Exception. (str num-scheduled-invalid " supposedly unschedulable jobs were scheduled."))))))
+    (if (zero? num-scheduled-unschedulable)
+      (println (:total unschedulable-jobs) " intentionally unschedulable jobs were never scheduled.  Perfect!")
+      (throw (Exception. (str num-scheduled-unschedulable " supposedly unschedulable jobs were scheduled."))))))
