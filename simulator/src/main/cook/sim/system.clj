@@ -12,10 +12,12 @@
     (assoc component :settings (-> path slurp edn/read-string)))
 
   (stop [component]
-    (assoc component :settings nil)
-    ))
+    (assoc component :settings nil)))
 
-(defn new-config [path]
+(defn new-config
+  "Base system component; encapsulates application configuration.  Config
+  is loaded from an edn file."
+  [path]
   (map->Config {:path path}))
 
 
@@ -30,6 +32,9 @@
     (assoc component :conn nil)))
 
 (defn new-sim-db
+  "SimDb is a Datomic database that stores everything the Simulator wants to remember
+  about simulations - workload descriptors, the users therein, the jobs those users
+  will request during a simulation, etc."
   ([] (map->SimDb {}))
   ([config] (map->SimDb {:config config})))
 
@@ -45,11 +50,16 @@
     (assoc component :conn nil)))
 
 (defn new-cook-db
+  "CookDb is a reference to Cook Scheduler's own Datomic database.  Many functions
+  of the Simulator depend on having a connection available to this database.  For
+  example, the Cook database is queried to figure out what happened to various jobs
+  in a Simulation in order to analyze how the Scheduler performed."
   ([] (map->CookDb {}))
   ([config] (map->CookDb {:config config})))
 
 
 (defn system
+  "Top level access point for all of the system components."
   [config-path]
   (component/system-map
    :config (new-config config-path)

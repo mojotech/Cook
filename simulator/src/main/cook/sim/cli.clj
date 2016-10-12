@@ -12,6 +12,8 @@
   (:gen-class))
 
 (defn parse-integer-list
+  "Accepts a comma-delimited list of ids e.g. 4,5,6;
+  Returns a sequence of Longs."
   [str]
   (map #(Long/parseLong %) (string/split str #",")))
 
@@ -29,25 +31,36 @@
     :parse-fn parse-integer-list]
    ["-h" "--help" "Show help and exit"]])
 
-(defn usage [options-summary]
+(defn usage
+  "Prints out rudimentary usage info to stdout."
+  [options-summary]
   (->> ["lein run -c (config_file) task"]
        (string/join \newline)))
 
-(defn error-msg [errors]
+(defn error-msg
+  "Given a set of error messages, nicely prints them all out with an explanatory
+  heading."
+  [errors]
   (str "Couldn't interpret your command line:\n\n"
        (string/join \newline errors)))
 
 (defn exit
+  "Exits the process with a specific code and optional error message."
   ([status] (System/exit status))
   ([status msg]
    (println msg)
    (System/exit status)))
 
 (defn- start-component
+  "Convenience function: starts a system component given the configuration and
+  function reference"
   [config component-function]
   (-> config component-function component/start))
 
-(defn -main [& args]
+(defn -main
+  "Main command line entry point.  Parses the command line and performs
+  various actions depending on its contents."
+  [& args]
   (try
     (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
       (cond

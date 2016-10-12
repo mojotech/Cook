@@ -13,6 +13,9 @@
 
 
 (defn wait-for-cook
+  "Given the app settings, waits for the configured Cook API to become available.
+  Simply retries an HTTP connection; as soon as the connection isn't refused stop
+  waiting."
   [settings]
   (try-try-again {:sleep 5000 :tries 20
                   :error-hook #(println "Cook API not up yet:" (.getMessage %))}
@@ -28,6 +31,13 @@
   (not (string/starts-with? (:username job) "unsched")))
 
 (defn sim-progress
+  "Given both database system components and the id of a simulation, return a data
+  structure that represents the overall progress of the simulation.   The two top
+  level keys are :schedulable and :unschedulable, each containing summaries of the
+  jobs that fall into those categories. :total is the total number of jobs in the sim
+  that fall into the category; :unscheduled is the number of jobs that haven't yet been
+  launched by Cook scheduler; :unfinished is the number of jobs that haven't yet
+  completed successfully."
   [sim-db cook-db sim-id]
   (let [jobs (reporting/job-results-from-components sim-db cook-db sim-id)
         [schedulable-jobs unschedulable-jobs] ((juxt filter remove) schedulable? jobs)
@@ -41,6 +51,9 @@
                      :unfinished (count (intersection (set unschedulable-jobs) (set unscheduled-jobs)))}}))
 
 (defn sim-finished?
+  "Given a data structure of the type returned by sim-progress above, return true iff
+  the simulation appears finished (meaning that there are no schedulable jobs that
+  aren't finished)."
   [sim-db cook-db sim-id]
   (let [progress (sim-progress sim-db cook-db sim-id)
         count-unscheduled (-> progress :schedulable :unscheduled)
@@ -50,6 +63,9 @@
     (if (zero? count-unfinished) progress false)))
 
 (defn wait-for-sim-to-finish
+  "Given both databases, a simulation, and a number of seconds to wait, waits
+  for the specified simulation to become finished.  An exception will be raised
+  if the specified amount of time passes and the sim still isn't finished."
   [sim-db cook-db sim-id timeout-seconds]
   (let [sleep-seconds 5]
     (try-try-again {:sleep (* 1000 sleep-seconds)
@@ -60,6 +76,13 @@
 
 
 (defn perform-ci
+  "Top level function (invoked via the cli) that runs a simulation
+  with specific parameters designed specifically to serve as a smoke test on
+  Travis ci.  Raises an exception if any schedulable jobs in the simulation
+  don't get finished within a certain period of time.  Also raises an exception
+  if any intentionally unschelable jobs DO get finished.  Such exceptions will
+  cause the process to exit with a non-zero code, which in turn will cause the
+  Travis build to fail."
   [settings sim-db cook-db]
   (let [timeout-secs (* 5 60)
         file "travis-schedule.edn"

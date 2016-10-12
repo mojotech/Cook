@@ -15,6 +15,12 @@
       (simu/tx-ent (:db/id sim))))
 
 (defn schedule-cook-job
+  "Given the location of the Cook API, a job Id, and a map of job characteristics,
+  schedules a job with the specified characteristics via the Cook API.
+  Note:  two of the characteristics, :exit-code and :duration, combine to form the
+  actual executable command of the job - simply a shell command that will consume
+  no actual resources, but will run for the specified number of seconds before exiting
+  with the specified code."
   [cook-uri job-id {name :job/name
                     username :job/username
                     priority :job/priority
@@ -57,6 +63,12 @@
                   :job/uuid job-uuid}])))
 
 (defn simulate!
+  "Top level function that runs all of the jobs in a Simulation at their specified
+  times.
+  Parameters:  system components for the app settings and for the simulation
+  database, the ID of the simulation, and a label for this specific sim run
+  (to identify this sim run in charts and generally provide a way to identify it
+  later)."
   [settings sim-db test-id label]
   (println "Running a simulation for schedule " test-id "...")
   (let [{:keys [sim-db-uri cook-api-uri process-count]} settings
