@@ -116,4 +116,4 @@ Outputting comparison image to comparison.png
 ## Developing
 
 If you'd like to extend the Simulator or just run a lot of sims quickly via
-the REPL, [this document](doc/development.asc) will help you get started.
+the REPL, [this document](doc/development.md) will help you get started.
