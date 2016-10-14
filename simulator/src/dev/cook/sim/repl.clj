@@ -24,65 +24,81 @@
 
 (reloaded.repl/set-init! #(sys/system "config/settings.edn"))
 
-(defn list-models
-  [{conn :conn}]
-  (prn "listing models...")
-  (let [db (d/db conn)]
-    (prn (d/q '[:find [?e ...]
-                :where [?e :model/type :model.type/cook]]
-              db))))
-
 (defn settings
+  "Shortcut to obtaining the current system settings"
   []
   (-> system :config :settings))
 
 (defn sim-db
+  "Shortcut to obtain a reference to the Simulator Database system component"
   []
   (-> system :sim-db))
 
 (defn sim-db-val
+  "Shortcut to obtain a reference to the most current value
+  of the Simulator Database."
   []
   (-> (sim-db) :conn d/db))
 
 (defn sim-conn
+  "Shortcut to acquire a connection to the Simulator Database."
   []
   (:conn (sim-db)))
 
 (defn cook-db
+  "Shortcut to obtain a reference to the Scheduler Database system component"
   []
   (-> system :cook-db))
 
 (defn cook-db-val
+  "Shortcut to obtain a reference to the most current value
+  of the Scheduler Database."
   []
   (-> (cook-db) :conn d/db))
 
 (defn setup-database
+  "Shortcut to set up a new Simulator database based on current settings."
   []
   (db/setup-database! (settings)))
 
 (defn generate-schedule
+  "Shortcut to generate up a new job schedule based on current settings."
   []
   (schedule/generate-job-schedule! (settings) "schedule.edn"))
 
 (defn import-schedule
+  "Shortcut to import a work schedule into Datomic that already exists on the
+  filesystem, at the hardcoded location schedule.edn."
   []
   (schedule/import-schedule! (sim-db) "schedule.edn"))
 
 (defn kill-cook-db
+  "Shortcut to completely destroy the Cook Scheduler database.  Obviously,
+  don't do this to anything resembling a production database!"
   []
   (-> (settings) :cook-db-uri datomic.api/delete-database))
 
 (defn list-scheds
+  "Shortcut to list all job schedules currently defined in the Simulator datomic
+  database.  In order for a schedule to appear here, it must have been imported
+  (see above)."
   []
   (schedule/list-job-schedules (sim-db)))
 
 (defn list-sims
+  "Shortcut to print out some info about all  simulations that have been run for
+  a given work schedule.  The optional after param allows you to only list sims
+  that were started after a specific time."
   ([sched-id]
    (list-sims sched-id #inst "0000"))
   ([sched-id after]
    (report/list-sims (sim-db) (cook-db) sched-id after)))
 
 (defn simulate!
+  "Shortcut to run a simulation for a specific schedule given the current
+  system configuration.  Label param is mandatory; trust me, once you've run
+  a good number of simulations, you'll appreciate having labelled them so you
+  can remember which is which!"
   [sched-id label]
   (runner/simulate! (settings) (sim-db) sched-id label))
 
@@ -198,12 +214,3 @@
   "Returns Cook's current pre-emption settings."
   []
   (d/pull (cook-db-val) ["*"] :rebalancer/config))
-
-
-(comment
-  (if backup-after-seconds
-    (do
-      (println "waiting " backup-after-seconds "seconds before backing up...")
-      (Thread/sleep (* 1000 backup-after-seconds))
-      (backup-cook! {:entity-id (:db/id cook-sim)}))
-    (println "Not configured to do a backup of cook db.")))
