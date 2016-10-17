@@ -103,10 +103,14 @@
   (runner/simulate! (settings) (sim-db) sched-id label))
 
 (defn analyze
+  "Shortcut to print out a rough summmary of how jobs performed for a given
+  simulation."
   [sim-id]
   (report/analyze (settings) (sim-db) (cook-db) sim-id))
 
 (defn compare-sims
+  "Shortcut to write a comparison chart for a set of sim-ids to the hardcoded
+  file compare_chart.png, using current system components."
   [sim-ids]
   (report/compare-sims {:sim-db (sim-db)
                         :cook-db (cook-db)
@@ -114,6 +118,10 @@
                         :sim-ids sim-ids}))
 
 (defn compare-chart
+  "Get a reference to a comparison chart for a given metric between
+  specific simulation ids, and a username prefix pattern.  If the username prefix
+  parameter is empty, jobs for all usernames will be included in the chart; otherwise,
+  only jobs whose username begins with the prefix will be included."
   [metric sim-ids username-prefix]
   (report/job-by-job-comparison-chart
    :sim-db-val (sim-db-val)
@@ -125,6 +133,10 @@
    :sift-pred #(string/starts-with? (:username %) username-prefix)))
 
 (defn view-compare-chart
+  "Shortcut to open a Java UI window that shows a comparison chart for a specific
+  metric and set of job-ids.  Optionally, a username prefix filter may be included.
+  If present only jobs whose username begins with the username filter will be
+  represented on the chart."
   ([metric sim-ids]
    (view-compare-chart metric sim-ids ""))
   ([metric sim-ids username-prefix]
@@ -132,6 +144,9 @@
 
 
 (defn knob-chart
+  "Gets a reference to a knob-turning chart.  (see reporting.clj).  If
+  username-prefix is supplied, only jobs whose username begins with the username
+  filter will be represented on the chart."
   [metric sim-ids username-prefix]
   (report/knob-turning-chart :sim-db (sim-db-val)
                              :cook-db (cook-db-val)
@@ -143,6 +158,8 @@
                              :sift-pred #(string/starts-with? (:username %) username-prefix)))
 
 (defn save-knob-chart
+  "Shortcut to generate a knob-turning chart and save it to a specific filename.
+  "
   ([sim-ids metric]
    (save-knob-chart metric sim-ids ""))
   ([sim-ids metric username-prefix]
