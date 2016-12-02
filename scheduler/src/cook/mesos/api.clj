@@ -498,32 +498,21 @@
    Returns nil if the instance uuid doesn't correspond
    a job"
   [db instance-uuid]
-  (->> (d/entity db [:instance/task-id instance-uuid])
+  (->> (d/entity db [:instance/task-id (str instance-uuid)])
        :job/_instance
        :job/uuid))
 
 
 (defn retrieve-jobs
-  [conn ctx]
-  (let [jobs (get-in ctx [:request :query-params "job"])
-        instances (get-in ctx [:request :query-params "instance"])]
-    (let [instances (if (or (nil? instances) (vector? instances))
-                      instances
-                      [instances])
-          instance-uuid->job-uuid #(instance-uuid->job-uuid (d/db conn) %)
+  [conn instances-too? ctx]
+  (let [jobs (get-in ctx [:request :query-params :job])
+        instances (if instances-too? (get-in ctx [:request :query-params :instance]) [])]
+    (let [instance-uuid->job-uuid #(instance-uuid->job-uuid (d/db conn) %)
           instance-jobs (mapv instance-uuid->job-uuid instances)
-          jobs (if (or (nil? jobs) (vector? jobs))
-                 jobs
-                 [jobs])
-          jobs (mapv #(UUID/fromString %) jobs)
           used? (partial used-uuid? (db conn))]
       (cond
-        (and (seq instance-jobs)
-             (= :delete (get-in ctx [:request :request-method])))
-        [true {::error "Aborting instances is currently not supported"}]
         (and (every? used? jobs)
              (every? (complement nil?) instance-jobs))
-        ;;Currently don't support delete of instance. May in future
         [true {::jobs (into jobs instance-jobs)}]
         (some nil? instance-jobs)
         [false {::error (str "UUID "
@@ -531,25 +520,21 @@
                               \space
                               (filter (comp nil? instance-uuid->job-uuid)
                                       instances))
-                             " didn't correspond to a instance")}]
+                             " didn't correspond to an instance")}]
         :else
         [false {::error (str "UUID "
                              (str/join
                               \space
                               (remove used? jobs))
-                             " didn't correspond to a job")}]))
-    ))
+                             " didn't correspond to a job")}]))))
 
-(defn valid-job-parameters?
+(defn check-job-params-present
   [ctx]
-  (try
-    (let [jobs (get-in ctx [:request :query-params "job"])
-          instances (get-in ctx [:request :query-params "instance"])]
-      (if (or jobs instances)
-        false
-        [true {::error "must supply at least one job or instance query param"}]))
-    (catch Exception e
-      [true {::error e}])))
+  (let [jobs (get-in ctx [:request :query-params :job])
+        instances (get-in ctx [:request :query-params :instance])]
+    (if (or (seq jobs) (seq instances))
+      false
+      [true {::error "must supply at least one job or instance query param"}])))
 
 (defn job-request-allowed?
   [conn is-authorized-fn ctx]
@@ -564,31 +549,33 @@
       [false {::error (str "You are not authorized to view access the following jobs "
                            (str/join \space (remove authorized? uuids)))}])))
 
+(defn render-jobs-for-response
+  [conn fid ctx]
+  (mapv (partial fetch-job-map (db conn) fid) (::jobs ctx)))
+
+
 ;;; On GET; use repeated job argument
 (defn read-jobs-handler
   [conn fid task-constraints gpu-enabled? is-authorized-fn]
   (base-cook-handler
    {:allowed-methods [:get]
-    :exists? (partial retrieve-jobs conn)
-    :malformed? valid-job-parameters?
+    :malformed? check-job-params-present
     :allowed? (partial job-request-allowed? conn is-authorized-fn)
-    :handle-ok (fn [ctx]
-                 (mapv (partial fetch-job-map (db conn) fid) (::jobs ctx)))
-    }))
+    :exists? (partial retrieve-jobs conn true)
+    :handle-ok (partial render-jobs-for-response conn fid)}))
+
 
 ;;; On DELETE; use repeated job argument
 (defn destroy-jobs-handler
   [conn fid task-constraints gpu-enabled? is-authorized-fn]
   (base-cook-handler
    {:allowed-methods [:delete]
-    :exists? (partial retrieve-jobs conn)
-    :malformed? valid-job-parameters?
+    :malformed? check-job-params-present
     :allowed? (partial job-request-allowed? conn is-authorized-fn)
+    :exists? (partial retrieve-jobs conn false)
     :delete! (fn [ctx]
                (cook.mesos/kill-job conn (::jobs ctx)))
-    :handle-ok (fn [ctx]
-                 (mapv (partial fetch-job-map (db conn) fid) (::jobs ctx)))
-    }))
+    :handle-ok (partial render-jobs-for-response conn fid)}))
 
 
 ;;; On POST; JSON blob that looks like:
@@ -601,24 +588,21 @@
 (defn create-jobs-handler
   [conn fid task-constraints gpu-enabled? is-authorized-fn]
   (base-cook-handler
-   {:malformed? (fn [ctx]
+   {:allowed-methods [:post]
+    :malformed? (fn [ctx]
                   (let [params (get-in ctx [:request :body-params])
                         user (get-in ctx [:request :authorization/user])]
                     (try
-                      (cond
-                        (empty? params)
-                        [true {::error "must supply at least one job to start. Are you specifying that this is application/json?"}]
-                        :else
-                        [false {::jobs (mapv #(validate-and-munge-job
-                                               (db conn)
-                                               user
-                                               task-constraints
-                                               gpu-enabled?
-                                               %)
-                                             (get params :jobs))}])
+                      [false {::jobs (mapv #(validate-and-munge-job
+                                             (db conn)
+                                             user
+                                             task-constraints
+                                             gpu-enabled?
+                                             %)
+                                           (get params :jobs))}]
                       (catch Exception e
                         (log/warn e "Malformed raw api request")
-                        [true {::error e}]))))
+                        [true {::error (str e)}]))))
     :processable? (fn [ctx]
                     (try
                       (log/info "Submitting jobs through raw api:" (::jobs ctx))
@@ -631,9 +615,7 @@
              ;; We did the actual logic in processable?, so there's nothing left to do
              {::results (str/join \space (cons "submitted jobs" (map (comp str :uuid) (::jobs ctx))))})
 
-    :handle-created (fn [ctx]
-                      (::results ctx))
-    }))
+    :handle-created (fn [ctx] (::results ctx))}))
 
 
 ;;
@@ -946,7 +928,7 @@
                 :responses {204 {:description "The jobs have been marked for termination."}
                             400 {:description "Non-UUID values were passed as jobs."}
                             403 {:description "The supplied UUIDs don't correspond to valid jobs."}}
-                :parameters {:query-params JobOrInstanceIds}
+                :parameters {:query-params {:job [s/Uuid]}}
                 :handler (destroy-jobs-handler conn fid task-constraints gpu-enabled? is-authorized-fn)}}))
 
     (c-api/context
