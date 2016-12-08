@@ -21,12 +21,12 @@
             [compojure.core :refer (routes ANY)]
             [compojure.api.sweet :as c-api]
             [compojure.api.middleware :as c-mw]
-            [plumbing.core :refer [map-keys mapply]]
+            [plumbing.core :refer [map-keys map-vals mapply]]
             [camel-snake-kebab.core :refer [->snake_case]]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.core.cache :as cache]
-            [clojure.walk :as walk]
+            [clojure.walk :as walk :refer (keywordize-keys)]
             [clj-http.client :as http]
             [ring.middleware.json]
             [clojure.data.json :as json]
@@ -37,9 +37,7 @@
             [clj-time.core :as t]
             [cook.mesos.share :as share]
             [cook.mesos.quota :as quota]
-            [plumbing.core :refer (map-vals)]
-            [cook.mesos.reason :as reason]
-            [clojure.walk :refer (keywordize-keys)])
+            [cook.mesos.reason :as reason])
   (:import java.util.UUID))
 
 (def PosNum
