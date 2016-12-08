@@ -18,16 +18,15 @@
             [metatransaction.core :refer (db)]
             [schema.core :as s]
             [cook.mesos]
-            [compojure.core :refer (routes ANY)]
             [compojure.api.sweet :as c-api]
             [compojure.api.middleware :as c-mw]
-            [plumbing.core :refer [map-keys mapply]]
-            [camel-snake-kebab.core :refer [->snake_case ->kebab-case]]
+            [plumbing.core :refer [map-keys map-vals map-from-vals mapply]]
             [compojure.core :refer (GET POST ANY routes)]
+            [camel-snake-kebab.core :refer [->snake_case ->kebab-case]]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.core.cache :as cache]
-            [clojure.walk :as walk]
+            [clojure.walk :as walk :refer (keywordize-keys)]
             [clj-http.client :as http]
             [ring.middleware.json]
             [clojure.data.json :as json]
@@ -41,10 +40,8 @@
             [cook.mesos.schema :refer (host-placement-types)]
             [cook.mesos.share :as share]
             [cook.mesos.quota :as quota]
-            [plumbing.core :refer (map-vals map-from-vals)]
             [cook.mesos.reason :as reason]
-            [swiss.arrows :refer :all]
-            [clojure.walk :refer (keywordize-keys)])
+            [swiss.arrows :refer :all])
   (:import java.util.UUID))
 
 ;; This is necessary to prevent a user from requesting a uid:gid
