@@ -200,7 +200,7 @@
         fid (str "framework-id-" (UUID/randomUUID))
         fenzo-maker #(sched/make-fenzo-scheduler nil 100000 1)] ; The params are for offer declining, which should never happen
     (testing "Consume no schedule cases"
-      (are [schedule offers] (= [] (sched/match-offer-to-schedule (fenzo-maker) schedule offers))
+      (are [schedule offers] (= [] (:matches (sched/match-offer-to-schedule (fenzo-maker) schedule offers)))
                              [] (offer-maker 0 0)
                              [] (offer-maker 2 2000)
                              schedule (offer-maker 0 0)
@@ -209,15 +209,17 @@
                              schedule (offer-maker 1 500)))
     (testing "Consume Partial schedule cases"
       ;; We're looking for one task to get assigned
-      (are [offers] (= 1 (count (mapcat :tasks (sched/match-offer-to-schedule
-                                                 (fenzo-maker) schedule offers))))
+      (are [offers] (= 1 (count (mapcat :tasks
+                                        (:matches (sched/match-offer-to-schedule
+                                                   (fenzo-maker) schedule offers)))))
                     (offer-maker 1 1000)
                     (offer-maker 1.5 1500)))
     (testing "Consume full schedule cases"
       ;; We're looking for the entire schedule to get assigned
       (are [offers] (= (count schedule)
-                       (count (mapcat :tasks (sched/match-offer-to-schedule
-                                               (fenzo-maker) schedule offers))))
+                       (count (mapcat :tasks
+                                      (:matches (sched/match-offer-to-schedule
+                                                 (fenzo-maker) schedule offers)))))
                     (offer-maker 4 4000)
                     (offer-maker 5 5000)))))
 
