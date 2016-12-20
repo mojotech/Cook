@@ -426,7 +426,8 @@
    A schedule is just a sorted list of tasks, and we're going to greedily assign them to
    the offer.
 
-   Returns a list of tasks that got matched to the offer"
+   Returns {:matched (list of tasks that got matched to the offer)
+            :failures (list of unmatched tasks, and why they weren't matched)}"
   [^TaskScheduler fenzo considerable offers]
   (log/debug "Matching" (count offers) "offers to" (count considerable) "jobs with fenzo")
   (log/debug "offer to scheduleOnce" offers)
@@ -457,11 +458,12 @@
               f (.getFailures failure)]
         (log/debug (str f)))
       (log/debug "Task placement failure information concluded."))
-    (mapv (fn [assignment]
-            {:leases (.getLeasesUsed assignment)
-             :tasks (.getTasksAssigned assignment)
-             :hostname (.getHostname assignment)})
-          assignments)))
+    {:matches (mapv (fn [assignment]
+                      {:leases (.getLeasesUsed assignment)
+                       :tasks (.getTasksAssigned assignment)
+                       :hostname (.getHostname assignment)})
+                    assignments)
+     :failures failure-results}))
 
 (meters/defmeter [cook-mesos scheduler scheduler-offer-declined])
 
@@ -638,9 +640,9 @@
                                    (into {}))
               _ (log/debug "We'll consider scheduling" (map (fn [[k v]] [k (count v)]) considerable-by)
                            "of those pending jobs (limited to " num-considerable " due to backdown)")
-              matches (timers/time!
-                        handle-resource-offer!-match-duration
-                        (match-offer-to-schedule fenzo (apply concat (vals considerable-by)) offers))
+              {:keys [matches failures]} (timers/time!
+                                          handle-resource-offer!-match-duration
+                                          (match-offer-to-schedule fenzo (apply concat (vals considerable-by)) offers))
               offers-scheduled (for [{:keys [leases]} matches
                                      lease leases]
                                  (:offer lease))
