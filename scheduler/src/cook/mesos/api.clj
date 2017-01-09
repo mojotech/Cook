@@ -16,7 +16,7 @@
 (ns cook.mesos.api
   (:require [datomic.api :as d :refer (q)]
             [metatransaction.core :refer (db)]
-            [schema.core :as s]
+            [schema.core :as s :refer [defschema]]
             [cook.mesos]
             [compojure.api.sweet :as c-api]
             [compojure.api.middleware :as c-mw]
@@ -41,7 +41,8 @@
             [cook.mesos.share :as share]
             [cook.mesos.quota :as quota]
             [cook.mesos.reason :as reason]
-            [swiss.arrows :refer :all])
+            [swiss.arrows :refer :all]
+            [cook.mesos.unscheduled :as unscheduled])
   (:import java.util.UUID))
 
 ;; This is necessary to prevent a user from requesting a uid:gid
@@ -1025,7 +1026,8 @@
 
 (defn check-job-exists
   [conn ctx]
-  (let [job (or (get-in ctx [:request :query-params :job])
+  (let [job (or (get-in ctx [:request :path-params :job])
+                (get-in ctx [:request :query-params :job])
                 (get-in ctx [:request :body-params :job]))]
     (if (job-exists? (d/db conn) job)
       [true {::job job}]
@@ -1264,6 +1266,36 @@
                          (mapv (partial fetch-job-map db framework-id) job-uuids)))))
       ring.middleware.json/wrap-json-params))
 
+
+;;
+;; /unscheduled_jobs
+;;
+
+(defschema UnscheduledJobResponse {:uuid s/Uuid
+                                   :reasons [{:reason s/Str
+                                              :data {s/Any s/Any}}]})
+
+(defn job-reasons
+  [conn job-uuid]
+  (let [db (d/db conn)
+        job (d/entity db [:job/uuid job-uuid])
+        reasons (unscheduled/reasons conn job)
+        representation (map (fn [[reason data]] {:reason reason :data data})
+                            reasons)]
+    representation))
+
+(defn read-unscheduled-handler
+  [conn is-authorized-fn]
+  (base-cook-handler
+   {:allowed-methods [:get]
+    :exists? (partial check-job-exists conn)
+    :allowed? (fn [ctx]
+                (prn "heyyyyy read-unscheduled-handler")
+                (user-authorized-for-job? conn is-authorized-fn ctx (::job ctx)))
+    :handle-ok (fn [ctx] {:uuid (::job ctx)
+                          :reasons (job-reasons conn (::job ctx))})}))
+
+
 ;;
 ;; "main" - the entry point that routes to other handlers
 ;;
@@ -1376,7 +1408,21 @@
                               :description "The groups were returned."}
                          400 {:description "Non-UUID values were passed."}
                          403 {:description "The supplied UUIDs don't correspond to valid groups."}}
-             :handler (read-groups-handler conn fid task-constraints is-authorized-fn)}})))
+             :handler (read-groups-handler conn fid task-constraints is-authorized-fn)}}))
+
+     (c-api/context
+      "/unscheduled_jobs/:job" []
+      :path-params [job :- s/Uuid]
+      (c-api/resource
+       {:produces ["application/json"],
+        :get {:summary "Read reasons why a job isn't being scheduled."
+              :parameters {:path-params {:job s/Uuid}}
+              :handler (read-unscheduled-handler conn is-authorized-fn)
+              :responses {200 {:schema UnscheduledJobResponse
+                               :description "Reasons the job isn't being scheduled."}
+                          400 {:description "Invalid request format."}
+                          404 {:description "The UUID doesn't correspond to a job."}}}})))
+
     (ANY "/queue" []
          (waiting-jobs mesos-pending-jobs-fn is-authorized-fn))
     (ANY "/running" []
