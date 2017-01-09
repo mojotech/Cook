@@ -16,7 +16,7 @@
 (ns cook.mesos.api
   (:require [datomic.api :as d :refer (q)]
             [metatransaction.core :refer (db)]
-            [schema.core :as s]
+            [schema.core :as s :refer [defschema]]
             [cook.mesos]
             [compojure.core :refer (routes ANY)]
             [compojure.api.sweet :as c-api]
@@ -37,6 +37,7 @@
             [clj-time.core :as t]
             [cook.mesos.share :as share]
             [cook.mesos.quota :as quota]
+            [cook.mesos.unscheduled :as unscheduled]
             [cook.mesos.reason :as reason])
   (:import java.util.UUID))
 
@@ -700,7 +701,8 @@
 
 (defn check-job-exists
   [conn ctx]
-  (let [job (or (get-in ctx [:request :query-params :job])
+  (let [job (or (get-in ctx [:request :path-params :job])
+                (get-in ctx [:request :query-params :job])
                 (get-in ctx [:request :body-params :job]))]
     (if (used-uuid? (d/db conn) job)
       [true {::job job}]
@@ -833,6 +835,33 @@
     :post! (fn [ctx]
              (apply set-limit-fn conn (get-in ctx [:request :body-params :user]) (reduce into [] (::limits ctx))))}))
 
+;;
+;; /unscheduled_jobs
+;;
+
+(defschema UnscheduledJobResponse {:uuid s/Uuid
+                                   :reasons [{:reason s/Str
+                                              :data {s/Any s/Any}}]})
+
+(defn job-reasons
+  [conn job-uuid]
+  (let [db (d/db conn)
+        job (d/entity db [:job/uuid job-uuid])
+        reasons (unscheduled/reasons conn job)
+        representation (map (fn [[reason data]] {:reason reason :data data})
+                            reasons)]
+    representation))
+
+(defn read-unscheduled-handler
+  [conn is-authorized-fn]
+  (base-cook-handler
+   {:allowed-methods [:get]
+    :exists? (partial check-job-exists conn)
+    :allowed? (fn [ctx]
+                (user-authorized-for-job? conn is-authorized-fn ctx (::job ctx)))
+    :handle-ok (fn [ctx] {:uuid (::job ctx)
+                          :reasons (job-reasons conn (::job ctx))})}))
+
 
 ;;
 ;; "main" - the entry point that routes to other handlers
@@ -936,7 +965,22 @@
         :responses {201 {:schema PosInt
                          :description "The number of retries for the job"}
                     400 {:description "Invalid request format or bad job UUID."}
-                    401 {:description "Request user not authorized to access that job."}}}})))
+                    401 {:description "Request user not authorized to access that job."}}}}))
+
+    (c-api/context
+     "/unscheduled_jobs/:job" []
+     :path-params [job :- s/Uuid]
+     (c-api/resource
+      {:produces ["application/json"],
+       :get {:summary "Read reasons why a job isn't being scheduled."
+             :parameters {:path-params {:job s/Uuid}}
+             :handler (read-unscheduled-handler conn is-authorized-fn)
+             :responses {200 {:schema UnscheduledJobResponse
+                              :description "Reasons the job isn't being scheduled."}
+                         400 {:description "Invalid request format."}
+                         404 {:description "The UUID doesn't correspond to a job."}}}})))
+
+
 
     (ANY "/queue" []
          (waiting-jobs mesos-pending-jobs-fn is-authorized-fn))

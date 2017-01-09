@@ -325,3 +325,25 @@
                                 :query-params {:user "foo"}}))
             get-body (-> get-resp :body slurp json/read-str)]
         (is (= get-body initial-get-body))))))
+
+(deftest unscheduled-api
+  (let [conn (restore-fresh-database! "datomic:mem://mesos-api-test")
+        h (basic-handler conn)
+        uuid (str (java.util.UUID/randomUUID))
+        create-response (h {:request-method :post
+                            :scheme :http
+                            :uri "/rawscheduler"
+                            :headers {"Content-Type" "application/json"}
+                            :authorization/user "mforsyth"
+                            :body-params {"jobs" [(merge (basic-job)
+                                                         {"uuid" uuid
+                                                          "max_retries" 3})]}})
+        get-resp (h {:request-method :get
+                     :scheme :http
+                     :uri (str "/unscheduled_jobs/" uuid)
+                     :authorization/user "mforsyth"
+                     :path-params {:job uuid}})
+        get-body (-> get-resp :body slurp json/read-str)]
+    (is (= get-body {"uuid" uuid
+                     "reasons" [{"reason" "The job is now under investigation. Check back in a minute for more details!"
+                                 "data" {}}]}))))
