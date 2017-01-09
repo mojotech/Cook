@@ -66,6 +66,21 @@
 
 (def datomic-uri "datomic:mem://test-unscheduled")
 
+(deftest test-fenzo-placement
+  (let [conn (restore-fresh-database! datomic-uri)
+        placement-failures (str {:constraints {"novel_host_constraint" 3}
+                                 :resources {"Memory" 14
+                                             "CPU" 8}})]
+    (is (= (u/check-fenzo-placement conn
+                                    {:db/id (d/tempid :db.part/user)
+                                     :job/under-investigation true
+                                     :job/last-fenzo-placement-failure placement-failures})
+           ["The job couldn't be placed on any available hosts."
+            {:reasons
+             [{:reason "Not enough Memory available." :host_count 14}
+              {:reason "Not enough CPU available." :host_count 8}
+              {:reason "Job already ran on this host." :host_count 3}]}]))))
+
 (deftest test-reasons
   (let [conn (restore-fresh-database! datomic-uri)
         _ (quota/set-quota! conn "mforsyth" :count 2)

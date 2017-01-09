@@ -131,6 +131,8 @@
                       :bytes (.trim (:out (clojure.java.shell/sh
                                             "git" "rev-parse" "HEAD")))})}]
 
+  :java-source-paths ["java"]
+
   :profiles
   {:uberjar
    {:aot [cook.components]}
@@ -138,7 +140,8 @@
    :dev
    {:dependencies [[clj-http-fake "1.0.1"]
                    [org.mockito/mockito-core "1.10.19"]
-                   [org.clojure/test.check "0.6.1"]]
+                   [org.clojure/test.check "0.6.1"]
+                   [im.chit/lucid.core.java "1.2.8"]]
     :jvm-opts ["-Xms2G"
                "-XX:-OmitStackTraceInFastThrow"
                "-Xmx2G"
