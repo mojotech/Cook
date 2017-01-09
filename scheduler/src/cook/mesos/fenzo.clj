@@ -58,7 +58,7 @@
   is enabled."
   [failures]
   (let [job (:job  (.. (first failures) (getRequest)))
-        under-investigation? (:job/under-investigation job)
+        under-investigation? true ; (:job/under-investigation job)
         summary (when (or under-investigation? (log/enabled? :debug))
                   (reduce summarize-placement-failure {} failures))]
     (when (log/enabled? :debug)

@@ -38,11 +38,15 @@
   that fall into the category; :unscheduled is the number of jobs that haven't yet been
   launched by Cook scheduler; :unfinished is the number of jobs that haven't yet
   completed successfully."
-  [sim-db cook-db sim-id]
+  [sim-db cook-db sim-id settings]
   (let [jobs (reporting/job-results-from-components sim-db cook-db sim-id)
         [schedulable-jobs unschedulable-jobs] ((juxt filter remove) schedulable? jobs)
         [scheduled-jobs unscheduled-jobs] ((juxt filter remove) :wait-time jobs)
         [finished-jobs unfinished-jobs] ((juxt filter remove) :turnaround jobs)]
+    (doseq [job jobs]
+      (let [uri (str (:cook-api-uri settings) "/unscheduled_jobs/" (:id job))
+            resp (http/get uri {:basic-auth ["u" "p"]})]
+        (prn "unscheduled API response for " uri ":" resp)))
     {:schedulable {:total (count schedulable-jobs)
                    :unscheduled (count (intersection (set schedulable-jobs) (set unscheduled-jobs)))
                    :unfinished (count (intersection (set schedulable-jobs) (set unfinished-jobs)))}
@@ -54,8 +58,8 @@
   "Given a data structure of the type returned by sim-progress above, return true iff
   the simulation appears finished (meaning that there are no schedulable jobs that
   aren't finished)."
-  [sim-db cook-db sim-id]
-  (let [progress (sim-progress sim-db cook-db sim-id)
+  [sim-db cook-db sim-id settings]
+  (let [progress (sim-progress sim-db cook-db sim-id settings)
         count-unscheduled (-> progress :schedulable :unscheduled)
         count-unfinished (-> progress :schedulable :unfinished)]
     (println count-unscheduled "unscheduled schedulable jobs.")
@@ -66,13 +70,13 @@
   "Given both databases, a simulation, and a number of seconds to wait, waits
   for the specified simulation to become finished.  An exception will be raised
   if the specified amount of time passes and the sim still isn't finished."
-  [sim-db cook-db sim-id timeout-seconds]
+  [sim-db cook-db sim-id timeout-seconds settings]
   (let [sleep-seconds 5]
     (try-try-again {:sleep (* 1000 sleep-seconds)
                     :tries (/ timeout-seconds sleep-seconds)
                     :return? :truthy?
                     :error-hook #(println "Sim not finished yet." %)}
-                   sim-finished? sim-db cook-db sim-id)))
+                   sim-finished? sim-db cook-db sim-id settings)))
 
 
 (defn perform-ci
@@ -90,7 +94,7 @@
         schedule-id (schedule/import-schedule! sim-db file)
         _ (wait-for-cook settings)
         sim-id (runner/simulate! settings sim-db schedule-id "Travis run")
-        final-progress (wait-for-sim-to-finish sim-db cook-db sim-id timeout-secs)
+        final-progress (wait-for-sim-to-finish sim-db cook-db sim-id timeout-secs settings)
         unschedulable-jobs (:unschedulable final-progress)
         num-scheduled-unschedulable (if final-progress
                                       (- (:total unschedulable-jobs)
