@@ -131,6 +131,8 @@
                       :bytes (.trim (:out (clojure.java.shell/sh
                                             "git" "rev-parse" "HEAD")))})}]
 
+  :java-source-paths ["java"]
+
   :profiles
   {:uberjar
    {:aot [cook.components]}
@@ -144,7 +146,8 @@
                                                        javax.jms/jms
                                                        com.sun.jdmk/jmxtools
                                                        com.sun.jmx/jmxri]]
-                   [ring/ring-jetty-adapter "1.5.0"]]
+                   [ring/ring-jetty-adapter "1.5.0"]
+                   [im.chit/lucid.core.java "1.2.8"]]
     :jvm-opts ["-Xms2G"
                "-XX:-OmitStackTraceInFastThrow"
                "-Xmx2G"
