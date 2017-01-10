@@ -56,6 +56,32 @@
         [err-msg ways]
         nil))))
 
+(def constraint-name->message
+  {"novel_host_constraint" "Job already ran on this host."
+   "gpu_host_constraint" "Host has no GPU support."
+   "non_gpu_host_constraint" "Host is reserved for jobs that need GPU support."})
+
+(defn fenzo-failures-for-user
+  [raw-summary]
+  (reduce into [] [(map (fn [[k v]] {:reason (str "Not enough " k " available.")
+                                     :host_count v})
+                        (:resources raw-summary))
+                   (map (fn [[k v]] {:reason (constraint-name->message k)
+                                     :host_count v})
+                        (:constraints raw-summary))]))
+
+(defn check-fenzo-placement
+  [conn job]
+  (if (and (:job/under-investigation job) (:job/last-fenzo-placement-failure job))
+    ["The job couldn't be placed on any available hosts."
+     {:reasons (-> job :job/last-fenzo-placement-failure edn/read-string
+                   fenzo-failures-for-user)}]
+    (do
+      (when-not (:job/under-investigation job)
+        @(d/transact conn [{:db/id (:db/id job)
+                            :job/under-investigation true}]))
+      ["The job is now under investigation. Check back in a minute for more details!" {}])))
+
 (defn reasons
   [conn job]
   (let [db (d/db conn)]
@@ -69,5 +95,6 @@
                                     db job)
                (check-exceeds-limit share/get-share
                                     "The job would cause you to exceed resource shares."
-                                    db job)]))))
+                                    db job)
+               (check-fenzo-placement conn job)]))))
 
