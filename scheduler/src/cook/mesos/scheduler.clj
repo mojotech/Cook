@@ -17,6 +17,7 @@
   (:require [mesomatic.scheduler :as mesos]
             [mesomatic.types :as mtypes]
             [cook.mesos.dru :as dru]
+            [cook.mesos.fenzo-utils :as fenzo]
             [cook.mesos.task :as task]
             [cook.mesos.group :as group]
             cook.mesos.schema
@@ -450,14 +451,7 @@
         failure-results (.. result getFailures values)
         assignments (.. result getResultMap values)]
     (log/debug "Found this assigment:" result)
-    (when (and (seq failure-results) (log/enabled? :debug))
-      (log/debug "Task placement failure information follows:")
-      (doseq [failure-result failure-results
-              failure failure-result
-              :let [_ (log/debug (str (.getConstraintFailure failure)))]
-              f (.getFailures failure)]
-        (log/debug (str f)))
-      (log/debug "Task placement failure information concluded."))
+
     {:matches (mapv (fn [assignment]
                       {:leases (.getLeasesUsed assignment)
                        :tasks (.getTasksAssigned assignment)
@@ -687,6 +681,9 @@
           (log/debug "matched normal jobs:" (count matched-normal-jobs))
           (log/debug "matched gpu jobs:" (count matched-gpu-job-uuids))
           (log/debug "updated-scheduler-contents:" (update-scheduler-contents @pending-jobs))
+
+          (fenzo/record-placement-failures! conn failures)
+
           (reset! front-of-job-queue-mem-atom
                   (or (:mem first-considerable-resources) 0))
           (reset! front-of-job-queue-cpus-atom
