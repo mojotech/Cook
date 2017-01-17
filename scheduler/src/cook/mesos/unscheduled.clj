@@ -45,14 +45,24 @@
          (filter seq)
          (into {}))))
 
+(defn jobs-by-user-and-state
+  [db user state]
+  (->> (q '[:find [?j ...]
+            :in $ ?user ?state
+            :where
+            [?j :job/state ?state]
+            [?j :job/user ?user]]
+          db user state)
+       (map (partial d/entity db))
+       (map d/touch)))
+
 (defn check-exceeds-limit
   [read-limit-fn err-msg db job]
   (when (= (:job/state job) :job.state/waiting)
     (let [user (:job/user job)
           ways (how-job-would-exceed-resource-limits
                 (read-limit-fn db user)
-                (util/get-jobs-by-user-and-state db user :job.state/running
-                                                 (Date. 0) (Date.))
+                (jobs-by-user-and-state db user :job.state/running)
                 job)]
       (if (seq ways)
         [err-msg ways]
@@ -84,6 +94,36 @@
                             :job/under-investigation true}]))
       ["The job is now under investigation. Check back in a minute for more details!" {}])))
 
+(defn instance-running?
+  [instance]
+  (some #{(:instance/status instance)} #{:instance.status/running
+                                         :instance.status/unknown}))
+
+(defn check-queue-position
+  [conn job]
+  (let [db (d/db conn)
+        user (:job/user job)
+        job-uuid (:job/uuid job)
+        running-tasks (map
+                       (fn [j] (->> j
+                                    :job/instance
+                                    (filter instance-running?)
+                                    last))
+                       (jobs-by-user-and-state db user :job.state/running))
+        pending-tasks (map util/create-task-ent
+                           (jobs-by-user-and-state db user :job.state/waiting))
+        all-tasks (into running-tasks pending-tasks)
+        sorted-tasks (vec (sort (util/same-user-task-comparator) all-tasks))
+        queue-pos (first
+                   (keep-indexed
+                    (fn [i instance]
+                      (when (= (-> instance :job/_instance :job/uuid) job-uuid) i))
+                    sorted-tasks))
+        tasks-ahead (subvec sorted-tasks 0 queue-pos)]
+    (when (seq tasks-ahead)
+      [(str "You have " queue-pos " other jobs ahead in the queue.")
+       {:jobs (mapv #(-> % :job/_instance :job/uuid str) tasks-ahead)}])))
+
 (defn reasons
   [conn job]
   (let [db (d/db conn)]
@@ -98,5 +138,6 @@
                (check-exceeds-limit share/get-share
                                     "The job would cause you to exceed resource shares."
                                     db job)
+               (check-queue-position conn job)
                (check-fenzo-placement conn job)]))))
 
