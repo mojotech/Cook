@@ -357,3 +357,9 @@
    (keyword (name name-space) (name value)))
   ([name-space subspace value]
    (namespace-datomic (str (name name-space) "." (name subspace)) value)))
+
+(defn instance-running?
+  [instance]
+  (some #{(:instance/status instance)} #{:instance.status/running
+                                         :instance.status/unknown}))
+
