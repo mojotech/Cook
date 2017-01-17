@@ -398,3 +398,8 @@
         @(d/transact conn (mapv #(vector :db.fn/retractEntity (:db/id %))
                                 batch))))
     uncommitted-before))
+
+(defn instance-running?
+  [instance]
+  (some #{(:instance/status instance)} #{:instance.status/running
+                                         :instance.status/unknown}))
