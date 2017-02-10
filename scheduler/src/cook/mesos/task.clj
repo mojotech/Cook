@@ -42,6 +42,7 @@
 
 asidjasdij
 asdasd
+asdsadsa
 (defn TaskAssignmentResult->task-metadata
   "Organizes the info Fenzo has already told us about the task we need to run"
   [db fid ^TaskAssignmentResult fenzo-result]
