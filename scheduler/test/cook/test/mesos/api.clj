@@ -287,7 +287,8 @@
     (testing "retry a single job with static retries"
       (let [update-resp (h (merge retry-req-attrs
                                   {:request-method :put
-                                   :body-params {"job" [uuid1] "retries" 45}}))
+                                   :query-params {"job" uuid1}
+                                   :body-params {"retries" 45}}))
             _ (is (<= 200 (:status update-resp) 299))
             read-resp (h (merge retry-req-attrs  {:request-method :get
                                                   :query-params {"job" uuid1}}))
@@ -644,8 +645,8 @@
                                :uri "/retry"
                                :headers {"Content-Type" "application/json"}
                                :authorization/user "dgrnbrg"
-                               :body-params {"job" [uuid]
-                                             "retries" 198}}))
+                               :query-params {"job" [uuid]}
+                               :body-params {"retries" 198}}))
                   299)))
         (testing "Incrementing within limit"
           (is (<= 200

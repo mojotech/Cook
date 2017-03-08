@@ -1071,8 +1071,8 @@
    query parameters and body parameters.  So some manual work is needed to combine
    ?job=a&job=b with the retries specified in the JSON body payload."
   [ctx]
-  (let [query-jobs-coerced (get-in ctx [:request :query-params :job])
-        query-jobs-uncoerced (get-in ctx [:request :query-params "job"])
+  (let [query-jobs-coerced (vectorize (get-in ctx [:request :query-params :job]))
+        query-jobs-uncoerced (vectorize (get-in ctx [:request :query-params "job"]))
         ;; if the query params are coerceable, both :job and "job" keys will be
         ;; present, but in that case we only want to read the coerced version
         query-jobs (or query-jobs-coerced (mapv #(UUID/fromString %) query-jobs-uncoerced))
